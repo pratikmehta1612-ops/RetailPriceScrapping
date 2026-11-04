@@ -3,55 +3,52 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Retail Price Compare</title>
+  <title>Similar Product Finder</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔎</text></svg>">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <span class="logo" aria-hidden="true">⛽</span>
+      <span class="logo" aria-hidden="true">🔎</span>
       <div>
-        <h1>Retail Price Compare</h1>
-        <p class="sub">Automotive parts &amp; supplies, matched by spec</p>
+        <h1>Similar Product Finder</h1>
+        <p class="sub">Give one product. Get comparable products, prices and store links.</p>
       </div>
     </div>
-    <button id="refresh-all" class="btn ghost" type="button">Refresh all prices</button>
+    <div id="status-chips" class="status-chips"></div>
   </header>
 
-  <section class="add card">
-    <form id="add-form" class="add-row">
-      <input id="add-url" type="url" required placeholder="Paste a product link from Amazon, Walmart, Target, Best Buy or any store">
-      <button class="btn primary" type="submit">Add product</button>
-    </form>
-    <details id="import">
-      <summary>Site blocked the scraper? Import a saved page instead</summary>
-      <form id="import-form" class="import-form">
-        <input id="import-url" type="url" required placeholder="Original product URL">
-        <label class="file">
-          <input id="import-file" type="file" accept=".html,.htm">
-          <span>Choose saved .html file</span>
-        </label>
-        <textarea id="import-html" rows="4" placeholder="…or paste the page HTML here"></textarea>
-        <button class="btn" type="submit">Import page</button>
+  <div id="setup" class="card setup" hidden></div>
+
+  <div class="layout">
+    <aside class="card history">
+      <h2>Recent searches</h2>
+      <ul id="history" class="history-list"></ul>
+      <p id="history-empty" class="muted small">Your searches will appear here, so you can reopen them without using search credits.</p>
+    </aside>
+
+    <main>
+      <form id="find-form" class="card find">
+        <label for="url" class="field-label">Reference product link</label>
+        <input id="url" type="url" placeholder="https://www.store.com/product-page">
+        <label for="details" class="field-label">Product name or key details <span class="muted">(optional, helps when the page can't be read)</span></label>
+        <textarea id="details" rows="2" placeholder='e.g. Husky Round Bar Hitch W/ Sway Control, 12K, 2-5/16" Ball, No Shank'></textarea>
+        <div class="find-actions">
+          <label id="ai-toggle" class="toggle" hidden>
+            <input id="use-ai" type="checkbox" checked>
+            <span>Use Claude AI to judge matches</span>
+          </label>
+          <span class="spacer"></span>
+          <button id="demo-btn" class="btn ghost" type="button">Try demo</button>
+          <button id="find-btn" class="btn primary" type="submit">Find similar products</button>
+        </div>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
       </form>
-    </details>
-    <p id="status" class="status" role="status" aria-live="polite"></p>
-  </section>
 
-  <main class="layout">
-    <section class="card list-pane">
-      <div class="list-head">
-        <input id="filter" type="search" placeholder="Filter products">
-        <div id="chips" class="chips"></div>
-      </div>
-      <ul id="product-list" class="product-list"></ul>
-      <p id="empty" class="empty" hidden>No products yet. Add a product link above to start comparing.</p>
-    </section>
-
-    <section id="detail" class="card detail-pane">
-      <p class="empty">Select a product to see its features, price history and similar products from other stores.</p>
-    </section>
-  </main>
+      <section id="results"></section>
+    </main>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>

@@ -1,299 +1,257 @@
 "use strict";
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const state = { products: [], category: null, selected: null, minScore: 0.4 };
+const state = { status: null, run: null, sort: "match", showPartial: true };
 
-const RETAILER_NAMES = { amazon: "Amazon", walmart: "Walmart", target: "Target", bestbuy: "Best Buy" };
-const CATEGORY_NAMES = {
-  tire: "Tires", motor_oil: "Motor oil", battery: "Batteries", wiper_blade: "Wiper blades",
-  brake_pads: "Brake pads", brake_rotor: "Brake rotors", oil_filter: "Oil filters",
-  cabin_air_filter: "Cabin filters", engine_air_filter: "Air filters", spark_plug: "Spark plugs",
-  headlight_bulb: "Bulbs", coolant: "Coolant", transmission_fluid: "Transmission fluid",
-  brake_fluid: "Brake fluid", floor_mats: "Floor mats", dash_cam: "Dash cams",
-  jump_starter: "Jump starters", car_charger: "Car chargers", other: "Other",
+const LEVELS = {
+  same: "Same product",
+  strong: "Strong match",
+  good: "Good match",
+  partial: "Partial match",
 };
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
-const money = (v, cur = "USD") =>
-  v == null ? "—" : new Intl.NumberFormat("en-US", { style: "currency", currency: cur || "USD" }).format(v);
-const label = (key) => key.replace(/_/g, " ").replace(/\b(in|mm|k)\b$/, (u) => `(${u})`);
-const retailer = (r) => RETAILER_NAMES[r] || r;
-const fmtValue = (v) => (Array.isArray(v) ? (v.length === 2 && typeof v[0] === "number" ? `${v[0]}–${v[1]}` : v.join(", ")) : v === true ? "yes" : v);
+function money(v, cur = "USD") {
+  if (v == null) return "—";
+  try { return new Intl.NumberFormat("en-US", { style: "currency", currency: cur || "USD" }).format(v); }
+  catch { return `$${Number(v).toFixed(2)}`; }
+}
+function safeUrl(u) {
+  try { const p = new URL(u); return p.protocol === "http:" || p.protocol === "https:" ? p.href : null; } catch { return null; }
+}
+function thumb(src, cls = "thumb") {
+  const url = safeUrl(src);
+  return url
+    ? `<img class="${cls}" src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='<div class=&quot;${cls} blank&quot;>📦</div>'">`
+    : `<div class="${cls} blank">📦</div>`;
+}
 
 async function api(path, options = {}) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
   if (res.status === 204) return null;
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || data));
+  if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : `Request failed (HTTP ${res.status})`);
   return data;
 }
 
-function setStatus(text, kind = "") {
+function setStatus(html, kind = "") {
   const el = $("#status");
-  el.textContent = text;
+  el.innerHTML = html;
   el.className = `status ${kind}`;
 }
 
-function thumb(src, cls = "thumb") {
-  return src ? `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='<div class=&quot;${cls} blank&quot;>🛞</div>'">`
-             : `<div class="${cls} blank">🛞</div>`;
-}
+// ---------------------------------------------------------------- status & setup
 
-// ---------------------------------------------------------------- list
-
-async function loadProducts() {
-  state.products = await api("/api/products");
-  renderChips();
-  renderList();
-}
-
-function renderChips() {
-  const counts = {};
-  state.products.forEach((p) => (counts[p.category] = (counts[p.category] || 0) + 1));
-  const chips = [["", `All ${state.products.length}`], ...Object.entries(counts).map(([c, n]) => [c, `${CATEGORY_NAMES[c] || c} ${n}`])];
-  $("#chips").innerHTML = chips
-    .map(([c, text]) => `<button class="chip" type="button" data-cat="${esc(c)}" aria-pressed="${(state.category || "") === c}">${esc(text)}</button>`)
-    .join("");
-}
-
-function renderList() {
-  const q = $("#filter").value.trim().toLowerCase();
-  const items = state.products.filter(
-    (p) => (!state.category || p.category === state.category) &&
-           (!q || `${p.title} ${p.brand || ""} ${p.retailer}`.toLowerCase().includes(q)),
-  );
-  $("#empty").hidden = state.products.length > 0;
-  $("#product-list").innerHTML = items
-    .map((p) => `
-      <li data-id="${p.id}" aria-selected="${state.selected === p.id}">
-        ${thumb(p.image)}
-        <div>
-          <div class="p-title">${esc(p.title)}</div>
-          <div class="p-meta"><span class="retailer">${esc(retailer(p.retailer))}</span> · ${esc(CATEGORY_NAMES[p.category] || p.category)}</div>
-        </div>
-        <div class="price">${money(p.price, p.currency)}
-          ${p.unit_price != null ? `<span class="unit">${money(p.unit_price, p.currency)}/${esc(p.unit_label)}</span>` : ""}
-        </div>
-      </li>`)
-    .join("");
-}
-
-// ---------------------------------------------------------------- detail
-
-async function select(id) {
-  state.selected = id;
-  renderList();
-  const pane = $("#detail");
-  pane.innerHTML = `<p class="empty">Loading…</p>`;
-  try {
-    const [product, history, similar] = await Promise.all([
-      api(`/api/products/${id}`),
-      api(`/api/products/${id}/history`),
-      api(`/api/products/${id}/similar?min_score=${state.minScore}`),
-    ]);
-    renderDetail(product, history, similar);
-  } catch (err) {
-    pane.innerHTML = `<p class="empty">${esc(err.message)}</p>`;
+async function loadStatus() {
+  const s = await api("/api/status");
+  state.status = s;
+  $("#status-chips").innerHTML = `
+    <span class="pill ${s.search_ready ? "on" : "off"}">Search: ${s.search_ready ? "ready" : "no API key"}</span>
+    <span class="pill ${s.ai_ready ? "on" : ""}">AI matching: ${s.ai_ready ? "on" : "off"}</span>`;
+  $("#ai-toggle").hidden = !s.ai_ready;
+  if (!s.search_ready) {
+    $("#setup").hidden = false;
+    $("#setup").innerHTML = `
+      <h2>One step before your first real search</h2>
+      <p class="small">Searching stores needs a free SerpApi key (250 searches a month, about 19 product searches).</p>
+      <ol class="small">
+        <li>Sign up at <a href="https://serpapi.com/users/sign_up" target="_blank" rel="noopener">serpapi.com</a> and copy your API key.</li>
+        <li>In the project folder, copy <code>.env.example</code> to <code>.env</code> and set <code>SERPAPI_API_KEY=your-key</code>.</li>
+        <li>Stop the server (Ctrl+C) and start it again.</li>
+      </ol>
+      <p class="small">Meanwhile, <strong>Try demo</strong> shows how results look using sample data.</p>`;
   }
 }
 
-function renderDetail(p, history, similar) {
-  const features = Object.entries(p.features).filter(([k]) => k !== "gtin");
-  $("#detail").innerHTML = `
-    <div class="d-head">
-      ${thumb(p.image)}
+// ---------------------------------------------------------------- history
+
+async function loadHistory() {
+  const rows = await api("/api/searches");
+  $("#history-empty").hidden = rows.length > 0;
+  $("#history").innerHTML = rows.map((r) => `
+    <li><button type="button" data-id="${r.id}" aria-current="${state.run && state.run.id === r.id}">
+      <div class="h-title">${esc(r.title)}</div>
+      <div class="h-meta">${new Date(r.created_at).toLocaleDateString()} · ${r.match_count} results${r.best_price != null ? ` · from ${money(r.best_price)}` : ""}${r.demo ? " · demo" : ""}</div>
+    </button></li>`).join("");
+}
+
+// ---------------------------------------------------------------- search
+
+async function runSearch({ demo = false } = {}) {
+  const url = $("#url").value.trim();
+  const details = $("#details").value.trim();
+  if (!demo && !url && !details) {
+    setStatus("Paste a product link or type the product name.", "error");
+    return;
+  }
+  const buttons = [$("#find-btn"), $("#demo-btn")];
+  buttons.forEach((b) => (b.disabled = true));
+  const steps = demo
+    ? ["Loading sample results…"]
+    : ["Reading the reference product…", "Searching stores…", "Comparing features…", "Finding store links…"];
+  let i = 0;
+  setStatus(`<span class="spinner"></span>${steps[0]}`);
+  const timer = setInterval(() => { i = Math.min(i + 1, steps.length - 1); setStatus(`<span class="spinner"></span>${steps[i]} This usually takes 15–40 seconds.`); }, 4000);
+  try {
+    const run = await api("/api/find", {
+      method: "POST",
+      body: JSON.stringify({ url: url || null, details: details || null, use_ai: $("#use-ai").checked, demo }),
+    });
+    setStatus("");
+    show(run);
+    loadHistory();
+  } catch (err) {
+    setStatus(esc(err.message), "error");
+  } finally {
+    clearInterval(timer);
+    buttons.forEach((b) => (b.disabled = false));
+  }
+}
+
+async function openSearch(id) {
+  try {
+    show(await api(`/api/searches/${id}`));
+    loadHistory();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    setStatus(esc(err.message), "error");
+  }
+}
+
+// ---------------------------------------------------------------- rendering
+
+function show(run) {
+  state.run = run;
+  render();
+}
+
+function render() {
+  const run = state.run;
+  if (!run) { $("#results").innerHTML = ""; return; }
+  const ref = run.reference;
+  const refUrl = safeUrl(ref.url);
+  const attrs = run.key_attributes.map((a) =>
+    `<span class="attr ${a.importance === "must" ? "must" : ""}" title="${esc(a.importance)}"><b>${esc(a.name)}:</b> ${esc(a.value)}</span>`).join("");
+
+  let matches = [...run.matches];
+  if (!state.showPartial) matches = matches.filter((m) => m.level !== "partial");
+  if (state.sort === "price") matches.sort((a, b) => (a.price ?? 1e12) - (b.price ?? 1e12));
+  const counts = run.matches.reduce((acc, m) => ((acc[m.level] = (acc[m.level] || 0) + 1), acc), {});
+
+  $("#results").innerHTML = `
+    <article class="card reference">
+      ${thumb(ref.image)}
       <div>
-        <span class="retailer">${esc(retailer(p.retailer))}</span>
-        <h2>${esc(p.title)}</h2>
-        <div class="d-price">${money(p.price, p.currency)}
-          ${p.unit_price != null ? `<span class="unit">${money(p.unit_price, p.currency)} per ${esc(p.unit_label)}</span>` : ""}
+        <div class="eyebrow">Reference product</div>
+        <h2>${esc(ref.title)}</h2>
+        <div class="ref-meta">
+          ${ref.brand ? `<span>${esc(ref.brand)}</span>` : ""}
+          ${ref.price != null ? `<span><b>${money(ref.price, ref.currency)}</b></span>` : ""}
+          ${refUrl ? `<a href="${esc(refUrl)}" target="_blank" rel="noopener">${esc(ref.store || "Open page")} ↗</a>` : ""}
+          <span>${run.candidates_found} products checked · ${run.searches_used} search credits${run.ai_used ? " · AI matching" : ""}</span>
         </div>
-        <div class="p-meta">${esc(p.availability || "")} · updated ${new Date(p.updated_at).toLocaleString()}</div>
-        <div class="d-actions">
-          <a href="${esc(p.url)}" target="_blank" rel="noopener">View at ${esc(retailer(p.retailer))} ↗</a>
-          <button class="btn small" type="button" data-action="refresh">Refresh price</button>
-          <button class="btn small danger" type="button" data-action="delete">Remove</button>
-        </div>
+        ${run.summary ? `<p class="small muted">${esc(run.summary)}</p>` : ""}
+        <div class="attrs">${attrs || '<span class="muted small">No attributes detected; matching used the title.</span>'}</div>
+        ${run.notes.length ? `<ul class="notes">${run.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
+        <details class="queries"><summary>Searches used</summary><ul>${run.queries.map((q) => `<li>${esc(q)}</li>`).join("")}</ul></details>
       </div>
+    </article>
+
+    <div class="toolbar">
+      <h2>${run.matches.length} similar products</h2>
+      <span class="muted small">${["same", "strong", "good", "partial"].filter((l) => counts[l]).map((l) => `${counts[l]} ${LEVELS[l].toLowerCase()}`).join(" · ")}</span>
+      <span class="spacer"></span>
+      <label><input type="checkbox" id="show-partial" ${state.showPartial ? "checked" : ""}> Show partial matches</label>
+      <label>Sort <select id="sort">
+        <option value="match" ${state.sort === "match" ? "selected" : ""}>Best match</option>
+        <option value="price" ${state.sort === "price" ? "selected" : ""}>Lowest price</option>
+      </select></label>
     </div>
 
-    <div class="section">
-      <h3>Detected features · ${esc(CATEGORY_NAMES[p.category] || p.category)}</h3>
-      ${features.length
-        ? `<div class="features">${features.map(([k, v]) => `<div class="feature"><div class="k">${esc(label(k))}</div><div class="v">${esc(fmtValue(v))}</div></div>`).join("")}</div>`
-        : `<p class="p-meta">No automotive features recognized. Similar-product matching will rely on the title.</p>`}
-    </div>
-
-    <div class="section">
-      <h3>Price history</h3>
-      ${chart(history, p.currency)}
-    </div>
-
-    <div class="section">
-      <h3>Similar products at other stores</h3>
-      <div class="sim-controls">
-        <label for="min-score">Minimum match</label>
-        <input id="min-score" type="range" min="0" max="1" step="0.05" value="${state.minScore}">
-        <span>${Math.round(state.minScore * 100)}%</span>
-      </div>
-      ${similarTable(similar, p)}
+    <div class="matches">
+      ${matches.map((m) => matchCard(m, ref)).join("") || `<div class="card empty">No matches at this filter.</div>`}
     </div>`;
 }
 
-function chart(history, currency) {
-  const pts = history.filter((h) => h.price != null);
-  if (pts.length === 0) return `<p class="p-meta">No prices recorded yet.</p>`;
-  if (pts.length === 1) return `<p class="p-meta">One price so far: ${money(pts[0].price, currency)} on ${new Date(pts[0].scraped_at).toLocaleDateString()}. Refresh later to build a history.</p>`;
-  // Draw at the pane's real width so text isn't stretched or squashed.
-  const W = Math.max(280, Math.round(($("#detail").clientWidth || 640) - 40)), H = 140, pad = { l: 56, r: 12, t: 10, b: 22 };
-  const xs = pts.map((p) => new Date(p.scraped_at).getTime());
-  const ys = pts.map((p) => p.price);
-  const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
-  let [y0, y1] = [Math.min(...ys), Math.max(...ys)];
-  if (y0 === y1) { y0 -= 1; y1 += 1; }
-  const sx = (x) => pad.l + ((x - x0) / (x1 - x0 || 1)) * (W - pad.l - pad.r);
-  const sy = (y) => pad.t + (1 - (y - y0) / (y1 - y0)) * (H - pad.t - pad.b);
-  const line = pts.map((p, i) => `${i ? "L" : "M"}${sx(xs[i]).toFixed(1)},${sy(p.price).toFixed(1)}`).join("");
-  const area = `${line}L${sx(xs.at(-1)).toFixed(1)},${H - pad.b}L${sx(xs[0]).toFixed(1)},${H - pad.b}Z`;
-  const day = (t) => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Price history">
-    <line class="grid" x1="${pad.l}" x2="${W - pad.r}" y1="${sy(y1)}" y2="${sy(y1)}"/>
-    <line class="grid" x1="${pad.l}" x2="${W - pad.r}" y1="${sy(y0)}" y2="${sy(y0)}"/>
-    <text x="4" y="${sy(y1) + 4}">${money(y1, currency)}</text>
-    <text x="4" y="${sy(y0) + 4}">${money(y0, currency)}</text>
-    <text x="${pad.l}" y="${H - 4}">${day(x0)}</text>
-    <text x="${W - pad.r}" y="${H - 4}" text-anchor="end">${day(x1)}</text>
-    <path class="area" d="${area}"/><path class="line" d="${line}"/>
-    ${pts.map((p, i) => `<circle class="dot" cx="${sx(xs[i])}" cy="${sy(p.price)}" r="3"><title>${money(p.price, currency)} · ${new Date(p.scraped_at).toLocaleString()}</title></circle>`).join("")}
-  </svg>`;
-}
+function matchCard(m, ref) {
+  const direct = safeUrl(m.link);
+  const google = safeUrl(m.google_link);
+  const pct = Math.round(m.score * 100);
+  const delta = m.price_vs_reference;
+  const cmp = m.comparisons.map((c) =>
+    `<span class="${c.match === "yes" ? "" : c.match}" title="Reference: ${esc(c.reference)} · This: ${esc(c.candidate)}">${c.match === "yes" ? "✓" : c.match === "partial" ? "≈" : "✗"} ${esc(c.label)}: ${esc(c.candidate)}</span>`).join("");
+  const diffs = m.differences.length ? `<div class="reason">Differences: ${m.differences.map(esc).join("; ")}</div>` : "";
+  const offers = m.offers.length > 1 ? `
+    <details class="offers"><summary>${m.offers.length} stores from ${money(m.offers[0].price, m.currency)}</summary>
+      <table>${m.offers.map((o) => `<tr><td>${safeUrl(o.link) ? `<a href="${esc(safeUrl(o.link))}" target="_blank" rel="noopener">${esc(o.store)}</a>` : esc(o.store)}</td>
+        <td class="muted">${esc(o.shipping || "")}</td><td class="p">${money(o.price, m.currency)}</td></tr>`).join("")}</table>
+    </details>` : "";
 
-function similarTable(rows, base) {
-  if (!rows.length) {
-    return `<p class="p-meta">No similar ${esc(CATEGORY_NAMES[base.category] || "products")} saved yet. Add the same kind of product from other stores to compare.</p>`;
-  }
-  const perUnit = base.unit_label;
-  return `<table class="sim-table">
-    <thead><tr><th>Match</th><th>Product</th><th>Price</th><th class="hide-sm">vs this${perUnit ? ` (per ${esc(perUnit)})` : ""}</th></tr></thead>
-    <tbody>${rows.map((r) => {
-      const d = r.price_difference;
-      const diff = d == null ? "—" : d === 0 ? "same" : `<span class="diff ${d < 0 ? "cheaper" : "pricier"}">${d < 0 ? "−" : "+"}${money(Math.abs(d), r.product.currency)}</span>`;
-      return `<tr data-id="${r.product.id}">
-        <td><div class="score"><div class="bar"><i style="width:${Math.round(r.score * 100)}%"></i></div>${Math.round(r.score * 100)}%</div></td>
-        <td><span class="retailer">${esc(retailer(r.product.retailer))}</span> ${esc(r.product.title)}
-          <div class="cmp">${r.comparisons.map((c) => `<span class="${c.match ? "" : "no"}" title="${esc(fmtValue(c.a))} vs ${esc(fmtValue(c.b))}">${c.match ? "✓" : "✗"} ${esc(label(c.feature))}</span>`).join("")}</div>
-        </td>
-        <td class="price">${money(r.product.price, r.product.currency)}
-          ${r.product.unit_price != null ? `<span class="unit">${money(r.product.unit_price, r.product.currency)}/${esc(r.product.unit_label)}</span>` : ""}
-          <span class="show-sm">${diff}</span></td>
-        <td class="hide-sm">${diff}</td>
-      </tr>`;
-    }).join("")}</tbody></table>`;
+  return `
+    <article class="card match" data-id="${m.id}">
+      ${thumb(m.thumbnail, "thumb sm")}
+      <div>
+        <div class="m-title">${esc(m.title)}</div>
+        <div class="m-store">
+          <span class="badge ${m.level}">${LEVELS[m.level]}</span>
+          <span>${esc(m.store || "Unknown store")}</span>
+          ${m.rating ? `<span>★ ${m.rating}${m.reviews ? ` (${m.reviews.toLocaleString()})` : ""}</span>` : ""}
+          ${m.delivery ? `<span>${esc(m.delivery)}</span>` : ""}
+          ${m.condition ? `<span>${esc(m.condition)}</span>` : ""}
+        </div>
+        ${cmp ? `<div class="cmp">${cmp}</div>` : ""}
+        ${m.reason ? `<div class="reason">${esc(m.reason)}</div>` : ""}
+        ${diffs}
+      </div>
+      <div class="m-side">
+        <div>
+          <div class="price">${money(m.price, m.currency)}</div>
+          ${m.old_price ? `<div class="old">${money(m.old_price, m.currency)}</div>` : ""}
+        </div>
+        ${delta != null && delta !== 0 ? `<span class="delta ${delta < 0 ? "cheaper" : "pricier"}">${delta < 0 ? "−" : "+"}${money(Math.abs(delta), m.currency)} vs reference</span>` : ""}
+        <div class="score" title="${m.ai_score != null ? `AI ${Math.round(m.ai_score * 100)}% · rules ${Math.round(m.rule_score * 100)}%` : "Rule-based score"}">
+          <div class="bar"><i style="width:${pct}%"></i></div>${pct}% match
+        </div>
+        <div class="links">
+          ${direct ? `<a class="btn small primary" href="${esc(direct)}" target="_blank" rel="noopener">View at ${esc(m.store || "store")} ↗</a>`
+                   : m.page_token ? `<button class="btn small primary" type="button" data-action="link">Get store link</button>` : ""}
+          ${google ? `<a class="btn small" href="${esc(google)}" target="_blank" rel="noopener">Google Shopping ↗</a>` : ""}
+        </div>
+      </div>
+      ${offers}
+    </article>`;
 }
 
 // ---------------------------------------------------------------- events
 
-$("#add-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const btn = e.submitter;
+$("#find-form").addEventListener("submit", (e) => { e.preventDefault(); runSearch(); });
+$("#demo-btn").addEventListener("click", () => runSearch({ demo: true }));
+$("#history").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-id]");
+  if (btn) openSearch(Number(btn.dataset.id));
+});
+$("#results").addEventListener("change", (e) => {
+  if (e.target.id === "sort") { state.sort = e.target.value; render(); }
+  if (e.target.id === "show-partial") { state.showPartial = e.target.checked; render(); }
+});
+$("#results").addEventListener("click", async (e) => {
+  const btn = e.target.closest('button[data-action="link"]');
+  if (!btn) return;
+  const id = Number(btn.closest(".match").dataset.id);
   btn.disabled = true;
-  setStatus("Fetching product page… (pages are fetched politely, this can take a few seconds)");
+  btn.textContent = "Looking up…";
   try {
-    const p = await api("/api/products", { method: "POST", body: JSON.stringify({ url: $("#add-url").value.trim() }) });
-    setStatus(`Added: ${p.title}`, "ok");
-    $("#add-url").value = "";
-    await loadProducts();
-    select(p.id);
+    const updated = await api(`/api/searches/${state.run.id}/matches/${id}/store-link`, { method: "POST" });
+    state.run.matches = state.run.matches.map((m) => (m.id === id ? updated : m));
+    render();
   } catch (err) {
-    setStatus(err.message, "error");
-    if (/Import HTML/i.test(err.message)) { $("#import").open = true; $("#import-url").value = $("#add-url").value; }
-  } finally {
     btn.disabled = false;
+    btn.textContent = "Get store link";
+    setStatus(esc(err.message), "error");
   }
 });
 
-$("#import-file").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (file) $("#import-html").value = await file.text();
-});
-
-$("#import-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  try {
-    const p = await api("/api/products/import", {
-      method: "POST",
-      body: JSON.stringify({ url: $("#import-url").value.trim(), html: $("#import-html").value }),
-    });
-    setStatus(`Imported: ${p.title}`, "ok");
-    $("#import-html").value = "";
-    $("#import-file").value = "";
-    await loadProducts();
-    select(p.id);
-  } catch (err) {
-    setStatus(err.message, "error");
-  }
-});
-
-$("#refresh-all").addEventListener("click", async (e) => {
-  e.target.disabled = true;
-  setStatus("Refreshing every product… this waits a few seconds between requests to each store.");
-  try {
-    const r = await api("/api/refresh", { method: "POST" });
-    setStatus(`Refreshed ${r.refreshed.length}, failed ${r.failed.length}.`, r.failed.length ? "error" : "ok");
-    await loadProducts();
-    if (state.selected) select(state.selected);
-  } catch (err) {
-    setStatus(err.message, "error");
-  } finally {
-    e.target.disabled = false;
-  }
-});
-
-$("#filter").addEventListener("input", renderList);
-$("#chips").addEventListener("click", (e) => {
-  const chip = e.target.closest(".chip");
-  if (!chip) return;
-  state.category = chip.dataset.cat || null;
-  renderChips();
-  renderList();
-});
-$("#product-list").addEventListener("click", (e) => {
-  const li = e.target.closest("li[data-id]");
-  if (li) select(Number(li.dataset.id));
-});
-
-$("#detail").addEventListener("click", async (e) => {
-  const row = e.target.closest("tr[data-id]");
-  if (row) return select(Number(row.dataset.id));
-  const action = e.target.dataset.action;
-  if (!action || !state.selected) return;
-  e.target.disabled = true;
-  try {
-    if (action === "refresh") {
-      await api(`/api/products/${state.selected}/refresh`, { method: "POST" });
-      setStatus("Price refreshed.", "ok");
-      await loadProducts();
-      select(state.selected);
-    } else if (action === "delete" && confirm("Remove this product and its price history?")) {
-      await api(`/api/products/${state.selected}`, { method: "DELETE" });
-      state.selected = null;
-      $("#detail").innerHTML = `<p class="empty">Product removed.</p>`;
-      await loadProducts();
-    }
-  } catch (err) {
-    setStatus(err.message, "error");
-  } finally {
-    e.target.disabled = false;
-  }
-});
-
-$("#detail").addEventListener("change", (e) => {
-  if (e.target.id === "min-score") {
-    state.minScore = Number(e.target.value);
-    select(state.selected);
-  }
-});
-
-loadProducts().catch((err) => setStatus(err.message, "error"));
+loadStatus().catch((err) => setStatus(esc(err.message), "error"));
+loadHistory().catch(() => {});

@@ -14,6 +14,18 @@ from typing import Any
 
 # Ordered: the first category whose keywords match wins.
 CATEGORY_KEYWORDS: list[tuple[str, tuple[str, ...]]] = [
+    # Towing first: their titles often mention balls, brakes and lights too.
+    ("weight_distribution_hitch", (r"weight[- ]distribut", r"\bwd hitch", r"\bwdh\b",
+                                   r"round[- ]bar hitch", r"trunnion[- ](?:bar )?hitch",
+                                   r"sway control hitch", r"\b[24][- ]point\b.*\bhitch")),
+    ("sway_control_kit", (r"sway control (?:kit|unit|bar)\b", r"friction sway")),
+    ("brake_controller", (r"brake controller",)),
+    ("trailer_wiring", (r"wiring harness|trailer wiring|[47][- ]way (?:plug|connector|adapter)|[47][- ]pin",)),
+    ("tongue_jack", (r"tongue jack|trailer jack|a-frame jack",)),
+    ("trailer_coupler", (r"\bcoupler\b",)),
+    ("ball_mount", (r"ball mount|draw ?bar\b|\bshank\b.*\bdrop\b",)),
+    ("hitch_ball", (r"hitch ball|trailer ball|tow ball",)),
+    ("receiver_hitch", (r"receiver hitch|trailer hitch|tow hitch|class (?:i{1,3}|iv|v|[1-5]) hitch",)),
     ("tire", (r"\btires?\b", r"\btyres?\b", r"(?<!\d)\d{3}/\d{2}\s?Z?R\s?\d{2}\b")),
     ("wiper_blade", (r"wiper", r"windshield blade")),
     ("battery", (r"\bbattery\b", r"\bbatteries\b", r"\bcca\b", r"cold cranking")),

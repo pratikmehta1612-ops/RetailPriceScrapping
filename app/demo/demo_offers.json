@@ -1,0 +1,336 @@
+{
+ "demo-token-0": {
+  "product_results": {
+   "title": "Husky Round Bar Weight Distribution Hitch with Sway Control, 12,000 lbs, 2-5/16\" Ball, No Shank",
+   "stores": [
+    {
+     "name": "Sample Tow Supply",
+     "link": "https://example.com/sampletowsupply/husky-round-bar-weight-distribution-hitch-with-sway-control",
+     "price": "$489.99",
+     "extracted_price": 489.99
+    },
+    {
+     "name": "Example Marketplace",
+     "link": "https://example.org/marketplace/husky-round-bar-weight-distribution-hitch-with-sway-control",
+     "price": "$509.59",
+     "extracted_price": 509.59
+    }
+   ]
+  }
+ },
+ "demo-token-1": {
+  "product_results": {
+   "title": "Husky 32218 Round Bar Weight Distribution Hitch W/ Sway Control 12K 2-5/16 Ball",
+   "stores": [
+    {
+     "name": "Example RV Parts",
+     "link": "https://example.com/examplervparts/husky-32218-round-bar-weight-distribution-hitch-w--sway-cont",
+     "price": "$512.40",
+     "extracted_price": 512.4
+    }
+   ]
+  }
+ },
+ "demo-token-2": {
+  "product_results": {
+   "title": "CURT 17063 TruTrack 2P Weight Distribution Hitch with Sway Control, 8K - 12K, 2-5/16-Inch Ball",
+   "stores": [
+    {
+     "name": "Demo Outfitters",
+     "link": "https://example.com/demooutfitters/curt-17063-trutrack-2p-weight-distribution-hitch-with-sway-c",
+     "price": "$619.95",
+     "extracted_price": 619.95
+    }
+   ]
+  }
+ },
+ "demo-token-3": {
+  "product_results": {
+   "title": "Equal-i-zer 4-Point Sway Control Hitch, 12,000 lbs Trailer Weight, 1,200 lbs Tongue Weight, 2-5/16 in. Ball",
+   "stores": [
+    {
+     "name": "Sample Tow Supply",
+     "link": "https://example.com/sampletowsupply/equal-i-zer-4-point-sway-control-hitch--12-000-lbs-trailer-w",
+     "price": "$789.00",
+     "extracted_price": 789.0
+    },
+    {
+     "name": "Example Marketplace",
+     "link": "https://example.org/marketplace/equal-i-zer-4-point-sway-control-hitch--12-000-lbs-trailer-w",
+     "price": "$820.56",
+     "extracted_price": 820.56
+    }
+   ]
+  }
+ },
+ "demo-token-4": {
+  "product_results": {
+   "title": "Fastway e2 Round Bar Hitch 2-Point Sway Control 12,000 lbs GTW, 1,200 lbs TW, 2-5/16\" Ball, No Shank",
+   "stores": [
+    {
+     "name": "Trailer Gear Example",
+     "link": "https://example.com/trailergearexample/fastway-e2-round-bar-hitch-2-point-sway-control-12-000-lbs-g",
+     "price": "$699.00",
+     "extracted_price": 699.0
+    }
+   ]
+  }
+ },
+ "demo-token-5": {
+  "product_results": {
+   "title": "Reese Strait-Line Round Bar Weight Distribution Hitch with Sway Control, 12,000 lbs Capacity, 2-5/16 in. Ball",
+   "stores": [
+    {
+     "name": "Example Hardware Co",
+     "link": "https://example.com/examplehardwareco/reese-strait-line-round-bar-weight-distribution-hitch-with-s",
+     "price": "$598.50",
+     "extracted_price": 598.5
+    }
+   ]
+  }
+ },
+ "demo-token-6": {
+  "product_results": {
+   "title": "Pro Series Round Bar Weight Distribution Hitch with Sway Control, 12,000 lb GTW, 2-5/16\" Ball",
+   "stores": [
+    {
+     "name": "Demo Outfitters",
+     "link": "https://example.com/demooutfitters/pro-series-round-bar-weight-distribution-hitch-with-sway-con",
+     "price": "$389.99",
+     "extracted_price": 389.99
+    },
+    {
+     "name": "Example Marketplace",
+     "link": "https://example.org/marketplace/pro-series-round-bar-weight-distribution-hitch-with-sway-con",
+     "price": "$405.59",
+     "extracted_price": 405.59
+    }
+   ]
+  }
+ },
+ "demo-token-7": {
+  "product_results": {
+   "title": "Camco Eaz-Lift Elite Round Bar Weight Distribution Hitch Kit with Sway Control, 12,000 lbs, 2-5/16 Ball",
+   "stores": [
+    {
+     "name": "Example RV Parts",
+     "link": "https://example.com/examplervparts/camco-eaz-lift-elite-round-bar-weight-distribution-hitch-kit",
+     "price": "$459.00",
+     "extracted_price": 459.0
+    }
+   ]
+  }
+ },
+ "demo-token-8": {
+  "product_results": {
+   "title": "Blue Ox SwayPro Weight Distributing Hitch, 1,200 lbs TW, 12,000 lbs GTW, Trunnion Bar, 2-5/16\" Ball",
+   "stores": [
+    {
+     "name": "Trailer Gear Example",
+     "link": "https://example.com/trailergearexample/blue-ox-swaypro-weight-distributing-hitch--1-200-lbs-tw--12",
+     "price": "$1,149.00",
+     "extracted_price": 1149.0
+    }
+   ]
+  }
+ },
+ "demo-token-9": {
+  "product_results": {
+   "title": "Andersen Hitches 3350 No-Sway Weight Distribution Hitch, 14,000 lb, 2-5/16 Ball, Shank Not Included",
+   "stores": [
+    {
+     "name": "Sample Tow Supply",
+     "link": "https://example.com/sampletowsupply/andersen-hitches-3350-no-sway-weight-distribution-hitch--14",
+     "price": "$879.00",
+     "extracted_price": 879.0
+    },
+    {
+     "name": "Example Marketplace",
+     "link": "https://example.org/marketplace/andersen-hitches-3350-no-sway-weight-distribution-hitch--14",
+     "price": "$914.16",
+     "extracted_price": 914.16
+    }
+   ]
+  }
+ },
+ "demo-token-10": {
+  "product_results": {
+   "title": "Husky Round Bar Weight Distribution Hitch with Sway Control, 10,000 lbs, 2-5/16\" Ball",
+   "stores": [
+    {
+     "name": "Example Hardware Co",
+     "link": "https://example.com/examplehardwareco/husky-round-bar-weight-distribution-hitch-with-sway-control",
+     "price": "$449.99",
+     "extracted_price": 449.99
+    }
+   ]
+  }
+ },
+ "demo-token-11": {
+  "product_results": {
+   "title": "Reese Pro Series Round Bar Weight Distribution Hitch, 10K, 2\" Ball, Sway Control",
+   "stores": [
+    {
+     "name": "Demo Outfitters",
+     "link": "https://example.com/demooutfitters/reese-pro-series-round-bar-weight-distribution-hitch--10k--2",
+     "price": "$349.99",
+     "extracted_price": 349.99
+    }
+   ]
+  }
+ },
+ "demo-token-12": {
+  "product_results": {
+   "title": "CURT 17500 Round Bar Weight Distribution Hitch, 10-14K, 2-5/16\" Ball, No Shank",
+   "stores": [
+    {
+     "name": "Trailer Gear Example",
+     "link": "https://example.com/trailergearexample/curt-17500-round-bar-weight-distribution-hitch--10-14k--2-5",
+     "price": "$439.00",
+     "extracted_price": 439.0
+    },
+    {
+     "name": "Example Marketplace",
+     "link": "https://example.org/marketplace/curt-17500-round-bar-weight-distribution-hitch--10-14k--2-5",
+     "price": "$456.56",
+     "extracted_price": 456.56
+    }
+   ]
+  }
+ },
+ "demo-token-13": {
+  "product_results": {
+   "title": "Eaz-Lift Recurve R6 Weight Distribution Hitch 1,200 lb Tongue, 12,000 lb Trailer, 2-5/16 in Ball, Sway Control",
+   "stores": [
+    {
+     "name": "Example RV Parts",
+     "link": "https://example.com/examplervparts/eaz-lift-recurve-r6-weight-distribution-hitch-1-200-lb-tongu",
+     "price": "$749.00",
+     "extracted_price": 749.0
+    }
+   ]
+  }
+ },
+ "demo-token-14": {
+  "product_results": {
+   "title": "Husky Center Line TS Weight Distribution Hitch with Sway Control 12,000 lbs 2-5/16\" Ball",
+   "stores": [
+    {
+     "name": "Sample Tow Supply",
+     "link": "https://example.com/sampletowsupply/husky-center-line-ts-weight-distribution-hitch-with-sway-con",
+     "price": "$829.99",
+     "extracted_price": 829.99
+    }
+   ]
+  }
+ },
+ "demo-token-15": {
+  "product_results": {
+   "title": "Husky 2-5/16\" Chrome Trailer Hitch Ball, 1\" Shank, 12,000 lbs",
+   "stores": [
+    {
+     "name": "Example Hardware Co",
+     "link": "https://example.com/examplehardwareco/husky-2-5-16--chrome-trailer-hitch-ball--1--shank--12-000-lb",
+     "price": "$34.99",
+     "extracted_price": 34.99
+    },
+    {
+     "name": "Example Marketplace",
+     "link": "https://example.org/marketplace/husky-2-5-16--chrome-trailer-hitch-ball--1--shank--12-000-lb",
+     "price": "$36.39",
+     "extracted_price": 36.39
+    }
+   ]
+  }
+ },
+ "demo-token-16": {
+  "product_results": {
+   "title": "Weight Distribution Shank, 2\" Receiver, 6\" Drop 8\" Rise",
+   "stores": [
+    {
+     "name": "Demo Outfitters",
+     "link": "https://example.com/demooutfitters/weight-distribution-shank--2--receiver--6--drop-8--rise",
+     "price": "$89.99",
+     "extracted_price": 89.99
+    }
+   ]
+  }
+ },
+ "demo-token-17": {
+  "product_results": {
+   "title": "Husky Friction Sway Control Kit, 10,000 lbs",
+   "stores": [
+    {
+     "name": "Trailer Gear Example",
+     "link": "https://example.com/trailergearexample/husky-friction-sway-control-kit--10-000-lbs",
+     "price": "$59.99",
+     "extracted_price": 59.99
+    }
+   ]
+  }
+ },
+ "demo-token-18": {
+  "product_results": {
+   "title": "Round Bar Spring Bars Replacement Pair, 1,200 lb Tongue Weight",
+   "stores": [
+    {
+     "name": "Example RV Parts",
+     "link": "https://example.com/examplervparts/round-bar-spring-bars-replacement-pair--1-200-lb-tongue-weig",
+     "price": "$159.00",
+     "extracted_price": 159.0
+    },
+    {
+     "name": "Example Marketplace",
+     "link": "https://example.org/marketplace/round-bar-spring-bars-replacement-pair--1-200-lb-tongue-weig",
+     "price": "$165.36",
+     "extracted_price": 165.36
+    }
+   ]
+  }
+ },
+ "demo-token-19": {
+  "product_results": {
+   "title": "CURT 45810 Class 4 Trailer Hitch Ball Mount, 2-1/2\" Receiver, 2\" Drop",
+   "stores": [
+    {
+     "name": "Sample Tow Supply",
+     "link": "https://example.com/sampletowsupply/curt-45810-class-4-trailer-hitch-ball-mount--2-1-2--receiver",
+     "price": "$79.00",
+     "extracted_price": 79.0
+    }
+   ]
+  }
+ },
+ "demo-token-20": {
+  "product_results": {
+   "title": "Fastway e2 Round Bar Hitch 2-Point Sway Control 10,000 lbs GTW, 1,000 lbs TW, 2\" Shank",
+   "stores": [
+    {
+     "name": "Example Hardware Co",
+     "link": "https://example.com/examplehardwareco/fastway-e2-round-bar-hitch-2-point-sway-control-10-000-lbs-g",
+     "price": "$629.00",
+     "extracted_price": 629.0
+    }
+   ]
+  }
+ },
+ "demo-token-21": {
+  "product_results": {
+   "title": "Pro Series Weight Distribution Kit, 5,000-10,000 lb, 2\" Ball",
+   "stores": [
+    {
+     "name": "Demo Outfitters",
+     "link": "https://example.com/demooutfitters/pro-series-weight-distribution-kit--5-000-10-000-lb--2--ball",
+     "price": "$279.99",
+     "extracted_price": 279.99
+    },
+    {
+     "name": "Example Marketplace",
+     "link": "https://example.org/marketplace/pro-series-weight-distribution-kit--5-000-10-000-lb--2--ball",
+     "price": "$291.19",
+     "extracted_price": 291.19
+    }
+   ]
+  }
+ }
+}

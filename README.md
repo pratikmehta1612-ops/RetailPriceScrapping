@@ -1,104 +1,127 @@
-# RetailPriceScrapping
+# RetailPriceScrapping — Similar Product Finder
 
-Compare prices of **similar automotive products** across retailers by matching on
-real specs: tire size, oil viscosity, battery group size, wiper length, bulb code
-and more. Paste product links from Amazon, Walmart, Target, Best Buy or any store,
-and the dashboard shows which items are true substitutes and which one is cheaper,
-including per-quart pricing for fluids.
+Give it **one reference product** (a link, a product name, or both). It reads the
+product's attributes — ratings, sizes, dimensions, included parts — searches online
+stores through Google Shopping, and returns **at least 10 comparable products** with
+price, store, a direct link, and a feature-by-feature comparison.
 
-## Quick start
+Example reference: *Husky Round Bar Hitch W/ Sway Control, 12K, 2-5/16" Ball, No Shank*
 
-```bash
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+| What the app reads | Value |
+|---|---|
+| Product type | Weight distribution hitch |
+| Weight rating | 12,000 lb |
+| Ball size | 2-5/16" |
+| Sway control | yes |
+| Bar type | round bar |
+| Shank included | no |
+
+Results with a different ball size or weight rating are pushed to the bottom, because
+they aren't real substitutes. The same product at other stores is labelled **Same product**.
+
+## 1. Get a SerpApi key (free)
+
+1. Sign up at https://serpapi.com/users/sign_up and copy your API key.
+2. In the project folder, copy `.env.example` to a new file named `.env`.
+3. Open `.env` in Notepad and set `SERPAPI_API_KEY=your-key`.
+
+The free plan has 250 searches a month. One reference product uses about **13**
+(3 searches + 10 direct store-link lookups), so roughly 19 products a month. Lower
+`STORE_LINK_LOOKUPS` in `.env` to stretch it; results without a link get a
+**Get store link** button instead.
+
+**Optional:** add an `ANTHROPIC_API_KEY` to let Claude read the reference page and
+judge matches more like a person would (about a cent per search with the default
+`claude-haiku-5-5` model). Without it the app uses its built-in rules.
+
+## 2. Install and run (Windows with Anaconda)
+
+Open **Anaconda Prompt** from the Start menu, then:
+
+```bat
+cd C:\Users\<you>\RetailPriceScrapping
+conda create -n retailprice python=3.12 -y
+conda activate retailprice
 pip install -r requirements.txt
-
-python -m scripts.load_demo        # optional: 10 sample products to explore
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000 and paste a product link.
+Open http://127.0.0.1:8000. Paste the product link and click **Find similar products**.
+No key yet? Click **Try demo** to see sample results (made-up stores and prices).
+
+Next time, only these are needed:
+
+```bat
+cd C:\Users\<you>\RetailPriceScrapping
+conda activate retailprice
+python -m uvicorn app.main:app --reload
+```
+
+<details><summary>Mac / Linux / plain Python</summary>
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
+```
+</details>
 
 ## How it works
 
 ```
-URL ─▶ fetcher ─▶ retailer adapter ─▶ feature extractor ─▶ SQLite ─▶ matcher ─▶ dashboard
-       robots.txt   Amazon/Walmart/     category + specs     price      weighted
-       rate limit   Target/Best Buy/    (tire size, 5W-30,   history    feature
-       block check  generic JSON-LD     group H6, 22"...)               similarity
+reference link / name
+   │  read page (JSON-LD, spec tables, "Label: value" lines) or the words in the link
+   ▼
+attributes ── 12,000 lb · 2-5/16" ball · sway control · round bar · no shank
+   │  (optional) Claude marks which attributes must match and writes searches
+   ▼
+3 Google Shopping searches via SerpApi ── ~40 products each, de-duplicated
+   │
+   ▼
+score every product ── same type? hard specs equal? other specs? title overlap?
+   │  (optional) Claude scores the shortlist and explains differences
+   ▼
+≥10 best matches ── price · store · direct link (immersive product lookup) · other stores' prices
 ```
 
-| Piece | File | What it does |
-|---|---|---|
-| Fetcher | `app/fetcher.py` | Checks robots.txt, waits between requests per site, retries 429/5xx, detects bot-check pages |
-| Adapters | `app/scrapers/retailers.py` | Amazon (page selectors), Walmart (`__NEXT_DATA__`), Target and Best Buy (JSON-LD + selectors), Best Buy official API when a key is set |
-| Generic parser | `app/extract/structured.py` | schema.org JSON-LD, microdata, OpenGraph and spec tables — works on most other stores |
-| Features | `app/extract/automotive.py` | Detects the category and pulls normalized specs |
-| Matching | `app/matching.py` | Weighted per-category similarity; a different tire size or oil viscosity caps the score at 25% |
-| API + UI | `app/main.py`, `app/static/` | FastAPI JSON API and a no-build dashboard |
+Searches run three ways: the exact product, the key specs without the brand (so other
+brands show up), and a broader spec search.
 
-### Categories and the features compared
+| File | Purpose |
+|---|---|
+| `app/reference.py` | Reads the reference product, falls back to the link's words if the page is blocked, builds search queries |
+| `app/extract/attributes.py` | Finds measurements in any text: `12K`, `12,000 lbs GTW`, `2-5/16"`, `3 ton`, `48 x 24 x 3 in`, `150 ft-lb`, class, volts, amps… |
+| `app/extract/automotive.py` | Product-type detection and type-specific specs (hitches, tires, oil, batteries, wipers, bulbs…) |
+| `app/matching.py` | Weighted scoring; mismatched "must-match" specs cap the score |
+| `app/ai.py` | Optional Claude reading and judging |
+| `app/search/serpapi.py` | Google Shopping and store-link lookups |
+| `app/finder.py` | Runs the whole search |
+| `app/static/` | The web page |
 
-| Category | Must match | Also compared |
-|---|---|---|
-| Tires | size (e.g. 225/65R17), run-flat | season, load index, speed rating, LT/P type, treadwear warranty |
-| Motor oil | viscosity (5W-30) | synthetic / blend / high mileage, diesel, API/ILSAC/dexos approvals |
-| Batteries | group size (H6, 24F…), voltage | AGM/EFB/flooded/lithium, CCA, reserve capacity, warranty |
-| Wiper blades | length | beam / hybrid / conventional |
-| Headlight bulbs | bulb code (H11, 9005…) | LED/halogen/HID, lumens, color temperature |
-| Brake pads | position (front/rear) | ceramic / semi-metallic / organic |
-| Coolant, ATF, brake fluid | 50/50 vs concentrate, spec, DOT rating | — |
+Past searches are saved in `data/searches.db`, so reopening one from **Recent searches**
+uses no credits.
 
-Every category also compares vehicle fitment (make and year range), pack count and title
-similarity. A shared GTIN/UPC or manufacturer part number means the same item at another
-store (100% match). Brand is intentionally not compared, since a cheaper brand with the
-same spec is what you're looking for. Fluids are compared **per quart** and multi-packs
-**per item**.
+## Tips
 
-## When a site blocks the scraper
-
-Big retailers, especially Amazon and Walmart, often answer automated requests with a
-CAPTCHA. This project does **not** try to get around bot protection. Instead:
-
-1. Open the product in your browser, **File → Save Page As… (HTML only)**.
-2. In the dashboard, expand *"Site blocked the scraper? Import a saved page instead"*,
-   enter the product URL and choose the saved file.
-
-The same parsers run on the saved page, so you get identical results.
-
-For reliable, ToS-friendly data at scale, use official APIs:
-
-- **Best Buy Products API** — set `BESTBUY_API_KEY` in `.env`. Lookups by SKU and the
-  `/api/search` endpoint then use the API. Best Buy only issues keys to company email
-  addresses, not Gmail/Yahoo.
-- **Amazon** — Product Advertising API 5.0 has been retired in favour of the **Creators
-  API**, which requires an approved Amazon Associates account. It isn't wired in yet; the
-  Amazon adapter in `app/scrapers/retailers.py` is the place to add it.
-
-Always check each retailer's terms of use before scraping.
+- **Store page blocked?** The app still works from the words in the link. You can also
+  type the product name and key specs in the details box.
+- **Not enough results?** Add details (e.g. `12,000 lb, 2-5/16 ball, round bar`) or use a
+  broader product name.
+- **Other countries:** set `SEARCH_COUNTRY` (e.g. `ca`, `gb`, `in`) in `.env`.
+- Prices come from Google Shopping at search time. Check the store page before buying.
 
 ## API
 
 | Method | Path | |
 |---|---|---|
-| GET | `/api/products?category=&q=` | List products with latest price |
-| POST | `/api/products` `{"url": ...}` | Scrape and save a product |
-| POST | `/api/products/import` `{"url", "html"}` | Save from page HTML |
-| GET | `/api/products/{id}` | One product |
-| DELETE | `/api/products/{id}` | Remove it and its history |
-| POST | `/api/products/{id}/refresh` | Re-scrape the price |
-| POST | `/api/refresh` | Re-scrape everything |
-| GET | `/api/products/{id}/history` | Price history |
-| GET | `/api/products/{id}/similar?min_score=0.4` | Ranked substitutes with feature-by-feature comparison |
-| GET | `/api/categories` | Product counts per category |
-| GET | `/api/search?q=` | Best Buy search (needs API key) |
+| POST | `/api/find` `{"url", "details", "use_ai", "demo"}` | Run a search |
+| GET | `/api/searches` | Recent searches |
+| GET / DELETE | `/api/searches/{id}` | Open or delete a saved search |
+| POST | `/api/searches/{id}/matches/{match_id}/store-link` | Look up one direct store link (1 credit) |
+| GET | `/api/status` | Which keys are configured |
 
 Interactive docs: http://127.0.0.1:8000/docs
-
-## Configuration
-
-Copy `.env.example` to `.env`. Set `REFRESH_INTERVAL_HOURS=24` to re-check prices
-daily while the server runs.
 
 ## Tests
 
@@ -106,12 +129,5 @@ daily while the server runs.
 pytest
 ```
 
-Tests run against synthetic product pages in `tests/fixtures/` (made-up prices), so they
-need no network access.
-
-## Ideas for next steps
-
-- Amazon Creators API and Walmart affiliate API adapters
-- Price-drop alerts (email / Slack) on top of the refresh loop
-- Vehicle profile ("2019 Honda Civic") to filter by fitment
-- More categories: filters by part-number cross-reference, rotors, shocks
+The tests replace SerpApi, Claude and the store page with fakes, so they need no keys
+or internet.
