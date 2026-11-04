@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 from .ai import AIError, Claude
 from .config import Settings
 from .extract.attributes import analyze, display_value, label
-from .matching import same_product, score as rule_score, title_similarity
+from .matching import SKIP, rules_for, same_product, score as rule_score, title_similarity
 from .reference import Reference, build_queries
 from .search.serpapi import Candidate, Offer, SearchError
 
@@ -69,6 +69,7 @@ class SearchRun(BaseModel):
     created_at: datetime
     reference: Reference
     key_attributes: list[dict[str, str]]
+    reference_specs: list[dict[str, str]] = Field(default_factory=list)  # columns for the comparison grid
     summary: str | None = None
     queries: list[str]
     matches: list[Match]
@@ -271,10 +272,17 @@ async def find_similar(
             notes.append(f"Store link lookup stopped: {exc}")
             break
 
+    order = [r.feature for r in rules_for(reference.category, reference.attributes)]
+    spec_keys = sorted((k for k in reference.attributes if k not in SKIP),
+                       key=lambda k: order.index(k) if k in order else len(order))
+    reference_specs = [{"feature": k, "label": label(k), "value": display_value(k, reference.attributes[k])}
+                       for k in spec_keys]
+
     return SearchRun(
         created_at=datetime.now(timezone.utc),
         reference=reference,
         key_attributes=key_attrs,
+        reference_specs=reference_specs,
         summary=summary,
         queries=queries,
         matches=matches,

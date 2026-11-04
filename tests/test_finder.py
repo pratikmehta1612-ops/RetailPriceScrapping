@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import hash_password
 from app.config import Settings
 from app.db import Database
 from app.main import create_app
@@ -73,12 +74,20 @@ class FakeNet:
         return httpx.Response(404)
 
 
-def make_client(net: FakeNet, **overrides) -> TestClient:
+TEST_USERS = f"alice:{hash_password('correct horse battery', iterations=1000)}"
+
+
+def make_client(net: FakeNet, login: bool = True, **overrides) -> TestClient:
     settings = Settings(**{
         "serpapi_api_key": "test-key", "anthropic_api_key": None, "database_path": ":memory:",
-        "min_request_interval": 0, **overrides,
+        "min_request_interval": 0, "app_users": TEST_USERS, "session_secret": "test-secret",
+        "block_private_addresses": False, **overrides,
     })
-    return TestClient(create_app(settings, Database(":memory:"), transport=httpx.MockTransport(net)))
+    client = TestClient(create_app(settings, Database(":memory:"), transport=httpx.MockTransport(net)))
+    if login:
+        r = client.post("/api/login", json={"username": "alice", "password": "correct horse battery"})
+        assert r.status_code == 200, r.text
+    return client
 
 
 def test_find_rules_only():

@@ -165,20 +165,24 @@ class SerpApi:
         self.location = location
         self.calls = 0
 
+    def _scrub(self, text: str) -> str:
+        """Never let the API key end up in an error message shown to users."""
+        return text.replace(self.api_key, "***") if self.api_key else text
+
     async def _get(self, params: dict[str, Any]) -> dict:
         params = {**params, "api_key": self.api_key}
         self.calls += 1
         try:
             resp = await self.client.get(ENDPOINT, params=params, timeout=60)
         except httpx.HTTPError as exc:
-            raise SearchError(f"Couldn't reach SerpApi: {exc}") from exc
+            raise SearchError(self._scrub(f"Couldn't reach SerpApi: {type(exc).__name__}")) from None
         try:
             data = resp.json()
         except json.JSONDecodeError as exc:
             raise SearchError(f"SerpApi returned HTTP {resp.status_code}.") from exc
         error = data.get("error")
         if error and "hasn't returned any results" not in error:
-            raise SearchError(f"SerpApi: {error}")
+            raise SearchError(self._scrub(f"SerpApi: {error}"))
         if resp.status_code >= 400 and not error:
             raise SearchError(f"SerpApi returned HTTP {resp.status_code}.")
         return data

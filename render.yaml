@@ -1,0 +1,26 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+# Secrets (sync: false) are NOT stored here or in GitHub. Render asks for them
+# when you create the service, and keeps them in its encrypted settings.
+services:
+  - type: web
+    name: similar-product-finder
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: APP_USERS
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DAILY_SEARCH_LIMIT
+        value: "15"
+      - key: COOKIE_SECURE
+        value: "true"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -22,6 +23,9 @@ def _load_dotenv(path: Path) -> None:
 
 
 _load_dotenv(ROOT / ".env")
+
+# Used when SESSION_SECRET isn't set: logins then last until the app restarts.
+_RANDOM_SECRET = secrets.token_urlsafe(32)
 
 
 def _bool(name: str, default: bool) -> bool:
@@ -75,6 +79,19 @@ class Settings:
     min_request_interval: float = field(default_factory=lambda: _float("MIN_REQUEST_INTERVAL", 1))
     request_timeout: float = field(default_factory=lambda: _float("REQUEST_TIMEOUT", 20))
     bestbuy_api_key: str | None = field(default_factory=lambda: os.getenv("BESTBUY_API_KEY") or None)
+
+    # Login and limits
+    app_users: str = field(default_factory=lambda: os.getenv("APP_USERS", ""))
+    session_secret: str = field(default_factory=lambda: os.getenv("SESSION_SECRET") or _RANDOM_SECRET)
+    daily_search_limit: int = field(default_factory=lambda: _int("DAILY_SEARCH_LIMIT", 15))
+    # "auto" = secure cookies when the site is opened over https.
+    cookie_secure: str = field(default_factory=lambda: os.getenv("COOKIE_SECURE", "auto").lower())
+    # Refuse links that point at private or internal network addresses.
+    block_private_addresses: bool = field(default_factory=lambda: _bool("BLOCK_PRIVATE_ADDRESSES", True))
+
+    @property
+    def secret_is_random(self) -> bool:
+        return self.session_secret == _RANDOM_SECRET
 
     @property
     def ai_enabled(self) -> bool:

@@ -8,6 +8,8 @@ or use an official API instead.
 from __future__ import annotations
 
 import asyncio
+import ipaddress
+import socket
 import time
 from urllib.parse import urlsplit
 from urllib.robotparser import RobotFileParser
@@ -36,6 +38,43 @@ _BLOCK_MARKERS = (
 )
 
 
+def _is_public_ip(address: str) -> bool:
+    ip = ipaddress.ip_address(address)
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return ip.is_global and not ip.is_multicast
+
+
+async def ensure_public_host(host: str, port: int | None = None) -> None:
+    """Refuse hosts that are, or resolve to, private/internal addresses.
+
+    Stops a visitor from using the hosted app to reach the server's own network
+    (cloud metadata services, databases, admin panels...).
+    """
+    host = (host or "").strip("[]").lower()
+    if not host or host == "localhost" or host.endswith((".localhost", ".local", ".internal")):
+        raise BlockedError("That link points to a private or internal address, so it can't be opened.")
+    try:
+        if not _is_public_ip(host):
+            raise BlockedError("That link points to a private or internal address, so it can't be opened.")
+        return
+    except ValueError:
+        pass  # not an IP literal; resolve the name below
+    loop = asyncio.get_running_loop()
+    try:
+        infos = await loop.getaddrinfo(host, port or 443, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise FetchError(f"Couldn't find the website {host}.") from exc
+    if not infos or not all(_is_public_ip(info[4][0]) for info in infos):
+        raise BlockedError("That link points to a private or internal address, so it can't be opened.")
+
+
+async def _guard_request(request: httpx.Request) -> None:
+    if request.url.scheme not in ("http", "https"):
+        raise BlockedError("Only http and https links can be opened.")
+    await ensure_public_host(request.url.host, request.url.port)
+
+
 class Fetcher:
     def __init__(self, settings: Settings | None = None, client: httpx.AsyncClient | None = None):
         self.settings = settings or get_settings()
@@ -48,6 +87,7 @@ class Fetcher:
         if self._client is None:
             self._client = httpx.AsyncClient(
                 follow_redirects=True,
+                max_redirects=5,
                 timeout=self.settings.request_timeout,
                 headers={
                     "User-Agent": self.settings.user_agent,
@@ -55,6 +95,11 @@ class Fetcher:
                     "Accept-Language": "en-US,en;q=0.9",
                 },
             )
+        if self.settings.block_private_addresses:
+            # Runs before every request, including each redirect hop.
+            hooks = dict(self._client.event_hooks)
+            hooks["request"] = list(hooks.get("request", [])) + [_guard_request]
+            self._client.event_hooks = hooks
         return self
 
     async def __aexit__(self, *exc) -> None:
